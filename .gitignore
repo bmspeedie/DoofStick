@@ -1,0 +1,6 @@
+# Arduino build output
+**/build/
+
+# Third-party libraries (install via Arduino Library Manager)
+FastLED/
+Adafruit_NeoPixel/
