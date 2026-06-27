@@ -1,10 +1,16 @@
-#define FASTLED_ALLOW_INTERRUPTS 0
-#include "globals.h"
+#include "DoofStickApp.h"
+
+namespace {
+alignas(DoofStickApp) uint8_t appStorage[sizeof(DoofStickApp)];
+DoofStickApp *app = nullptr;
+}
 
 void setup() {
-    g_doofStick.setup();
+    // Construct after Arduino init() so Wire/USB are ready (global ctor runs too early).
+    app = new (appStorage) DoofStickApp();
+    app->setup();
 }
 
 void loop() {
-    g_doofStick.loop();
+    app->loop();
 }

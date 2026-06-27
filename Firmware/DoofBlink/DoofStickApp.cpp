@@ -18,10 +18,10 @@ void DoofStickApp::updateButtons() {
     const bool bothHeld = buttonC && buttonZ;
     const uint32_t now = millis();
 
-    if (bothHeld && !prevBothButtons_) {
+    if (bothHeld && !prevBothButtons_ && !cPressArmed_) {
         chase_.rainbowLinger = false;
         chase_.stopRightDark();
-        chase_.dualMode = true;
+        cPressArmed_ = false;
         strobes_.pressed = false;
         strobes_.clearFade();
         chase_.centerMode = false;
@@ -30,13 +30,30 @@ void DoofStickApp::updateButtons() {
         cableTap_.reset(nunchuk_);
         updateColorLatch(nunchuk_.joyX(), nunchuk_.joyY());
         beat_.updatePeriod(now);
+        chase_.dualMode = true;
         chase_.start(latchedHue_, latchedSat_, beat_.chaseDurationMs(), true);
     }
-    if (buttonC && buttonZ) {
-        chase_.dualMode = true;
-    } else if (!buttonC && !buttonZ) {
+
+    if (chase_.dualMode && !buttonC && !buttonZ) {
         chase_.dualMode = false;
     }
+
+    if (!chase_.dualMode && buttonZ && !prevButtonZ_ && buttonC && cPressArmed_) {
+        cPressArmed_ = false;
+        strobes_.pressed = false;
+        strobes_.clearFade();
+        strobes_.off();
+        chase_.rainbowLinger = false;
+        chase_.stopRightDark();
+        chase_.centerMode = false;
+        chase_.stopCenter();
+        cableTap_.reset(nunchuk_);
+        updateColorLatch(nunchuk_.joyX(), nunchuk_.joyY());
+        beat_.updatePeriod(now);
+        chase_.dualMode = true;
+        chase_.start(latchedHue_, latchedSat_, beat_.chaseDurationMs(), true);
+    }
+
     prevBothButtons_ = bothHeld;
 
     if (chase_.dualMode) {
@@ -45,27 +62,26 @@ void DoofStickApp::updateButtons() {
         return;
     }
 
-    if (buttonC && !prevButtonC_ && !buttonZ) {
-        buttonCHoldStartMs_ = now;
-        strobes_.cHoldMode = false;
-        strobes_.clearFade();
-        strobes_.pressed = true;
-        cableTap_.reset(nunchuk_);
-        cableTap_.suppressAfterButton();
-        strobes_.on();
-    }
-
     if (buttonC && !buttonZ) {
+        if (!cPressArmed_) {
+            cPressArmed_ = true;
+            buttonCHoldStartMs_ = now;
+            strobes_.cHoldMode = false;
+            strobes_.clearFade();
+            strobes_.pressed = true;
+            cableTap_.reset(nunchuk_);
+            cableTap_.suppressAfterButton();
+            strobes_.on();
+        }
+
         const uint32_t heldMs = now - buttonCHoldStartMs_;
-        if (heldMs >= BUTTON_HOLD_MS) {
-            if (!strobes_.cHoldMode) {
-                strobes_.cHoldMode = true;
-                strobes_.pressed = false;
-                strobes_.clearFade();
-                chase_.stopChase();
-                chase_.rainbowLinger = false;
-                updateColorLatch(nunchuk_.joyX(), nunchuk_.joyY());
-            }
+        if (heldMs >= BUTTON_HOLD_MS && !strobes_.cHoldMode) {
+            strobes_.cHoldMode = true;
+            strobes_.pressed = false;
+            strobes_.clearFade();
+            chase_.stopChase();
+            chase_.rainbowLinger = false;
+            updateColorLatch(nunchuk_.joyX(), nunchuk_.joyY());
         }
     } else if (prevButtonC_ && !buttonZ) {
         const uint32_t heldMs = now - buttonCHoldStartMs_;
@@ -78,6 +94,11 @@ void DoofStickApp::updateButtons() {
             strobes_.pressed = false;
             strobes_.startFade();
         }
+        cPressArmed_ = false;
+    }
+
+    if (!buttonC) {
+        cPressArmed_ = false;
     }
 
     if (strobes_.pressed) {
@@ -151,6 +172,10 @@ void DoofStickApp::renderFrame(uint8_t joyX, uint8_t joyY, bool buttonC, bool bu
     if (strobes_.cHoldMode) {
         updateColorLatch(joyX, joyY);
         strobes_.updateCStrobeHold(strips_, latchedHue_, latchedSat_);
+    } else if (strobes_.pressed) {
+        chase_.stopChase();
+        chase_.stopRightDark();
+        chase_.stopStripFade();
     } else if (chase_.dualMode) {
         chase_.update(joyX, joyY);
     } else if (zLongHold) {
@@ -180,7 +205,7 @@ void DoofStickApp::renderFrame(uint8_t joyX, uint8_t joyY, bool buttonC, bool bu
         chase_.update(joyX, joyY);
     }
 
-    strobes_.update(strobes_.pressed);
+    strobes_.update(strobes_.pressed, strobes_.cHoldMode);
     prevLeftRainbowHold_ = leftRainbowHold;
 }
 
@@ -188,15 +213,36 @@ void DoofStickApp::setup() {
     strobes_.setup();
     strips_.setup();
 
+    delay(250);
     nunchuk_.begin();
-    while (!nunchuk_.connect()) {
+    for (uint8_t attempt = 0; attempt < 30; attempt++) {
+        if (tryConnectNunchuk()) {
+            nunchukReady_ = true;
+            break;
+        }
         delay(100);
     }
-    cableTap_.reset(nunchuk_);
+}
+
+bool DoofStickApp::tryConnectNunchuk() {
+    if (nunchuk_.connect()) {
+        cableTap_.reset(nunchuk_);
+        return true;
+    }
+    return false;
 }
 
 void DoofStickApp::loop() {
+    if (!nunchukReady_) {
+        nunchukReady_ = tryConnectNunchuk();
+        if (!nunchukReady_) {
+            delay(50);
+            return;
+        }
+    }
+
     if (!nunchuk_.update()) {
+        nunchukReady_ = false;
         nunchuk_.connect();
         delay(100);
         return;

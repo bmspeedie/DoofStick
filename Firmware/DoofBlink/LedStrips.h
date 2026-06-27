@@ -1,7 +1,7 @@
 #ifndef DOOF_LED_STRIPS_H
 #define DOOF_LED_STRIPS_H
 
-#include <FastLED.h>
+#include "DoofFastLED.h"
 #include "config.h"
 #include "pins.h"
 

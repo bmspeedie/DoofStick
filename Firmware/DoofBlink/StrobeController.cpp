@@ -1,11 +1,15 @@
 #include "StrobeController.h"
 #include "LedStrips.h"
+#include "pins.h"
 
 namespace {
 const uint8_t STROBE_PINS[] = {LEFT_STROBE, MIDDLE_STROBE, RIGHT_STROBE};
 }
 
 void StrobeController::setup() {
+    // init() configures PD5 as the USB TX LED before setup(); reclaim it for LEFT_STROBE.
+    pinMode(LEFT_STROBE, OUTPUT);
+    digitalWrite(LEFT_STROBE, LOW);
     for (uint8_t pin : STROBE_PINS) {
         pinMode(pin, OUTPUT);
     }
@@ -26,13 +30,13 @@ void StrobeController::writePin(uint8_t pin, uint8_t level) {
 
 void StrobeController::on() {
     for (uint8_t pin : STROBE_PINS) {
-        digitalWrite(pin, HIGH);
+        writePin(pin, 255);
     }
 }
 
 void StrobeController::off() {
     for (uint8_t pin : STROBE_PINS) {
-        digitalWrite(pin, LOW);
+        writePin(pin, 0);
     }
 }
 
@@ -46,8 +50,8 @@ void StrobeController::clearFade() {
     fade_.active = false;
 }
 
-void StrobeController::update(bool strobePressed) {
-    if (strobePressed || !fade_.active) {
+void StrobeController::update(bool strobePressed, bool cHoldMode) {
+    if (strobePressed || cHoldMode || !fade_.active) {
         return;
     }
 

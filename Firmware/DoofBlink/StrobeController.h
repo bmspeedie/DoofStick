@@ -14,7 +14,7 @@ public:
     void off();
     void startFade();
     void clearFade();
-    void update(bool strobePressed);
+    void update(bool strobePressed, bool cHoldMode);
     void updateCStrobeHold(LedStrips &strips, uint8_t hue, uint8_t sat);
 
     bool pressed = false;

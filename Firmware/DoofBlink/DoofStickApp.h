@@ -9,6 +9,7 @@
 #include "LedStrips.h"
 #include "StrobeController.h"
 #include "config.h"
+#include "pins.h"
 
 class DoofStickApp {
 public:
@@ -32,12 +33,15 @@ private:
     bool prevBothButtons_ = false;
     bool prevRightStickActive_ = false;
     bool prevLeftRainbowHold_ = false;
+    bool cPressArmed_ = false;
+    bool nunchukReady_ = false;
     uint32_t buttonZHoldStartMs_ = 0;
     uint32_t buttonCHoldStartMs_ = 0;
 
     void updateColorLatch(uint8_t joyX, uint8_t joyY);
     void updateButtons();
     void renderFrame(uint8_t joyX, uint8_t joyY, bool buttonC, bool buttonZ, bool bothHeld);
+    bool tryConnectNunchuk();
 };
 
 #endif

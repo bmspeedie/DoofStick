@@ -1,3 +1,4 @@
+#include "DoofFastLED.h"
 #include "LedStrips.h"
 
 void LedStrips::setup() {

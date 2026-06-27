@@ -1,7 +1,7 @@
 #ifndef DOOF_CHASE_CONTROLLER_H
 #define DOOF_CHASE_CONTROLLER_H
 
-#include <FastLED.h>
+#include "DoofFastLED.h"
 #include <Arduino.h>
 #include "config.h"
 
